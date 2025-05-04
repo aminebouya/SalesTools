@@ -1,14 +1,23 @@
 import streamlit as st
 import pandas as pd
 
-# Page configuration
+# Page configuration (must be the first Streamlit command)
 st.set_page_config(page_title="Interactive Slider Model", layout="wide")
+
+# --- Authentication ---
+PASSWORD = "PVS101"  # Set your desired password
+# Prompt for password in sidebar
+st.sidebar.header("Login")
+password_input = st.sidebar.text_input("Password", type="password")
+if password_input != PASSWORD:
+    st.sidebar.error("Invalid password")
+    st.stop()
 
 # Global CSS for larger text and inputs
 st.markdown(
     """
     <style>
-    html, body, [class*="css"] {
+    html, body, [class*=\"css\"] {
         font-size: 20px !important;
     }
     /* Enlarge slider and input labels */
@@ -83,7 +92,6 @@ with col2:
     st.subheader("Calculated Outputs")
     # Prepare display: exclude base & percent metrics
     display = {k: v for k, v in current.items() if k not in base_metrics and not k.endswith("%")}
-    # Create DataFrame with Metric as index and Value column
     df_display = pd.DataFrame.from_dict(display, orient='index', columns=['Value'])
 
     # Formatting
@@ -95,15 +103,12 @@ with col2:
         return val
 
     df_display['Value'] = [fmt_val(idx, v) for idx, v in df_display['Value'].items()]
-    # Show table with index as Metric names and no row numbers column
     st.table(df_display)
 
     st.subheader("Comparison of Saved Scenarios")
     if st.session_state.saved_scenarios:
         saved = pd.DataFrame(st.session_state.saved_scenarios)
-        # Drop base & keep percent, or drop percent too if desired
         saved = saved.drop(columns=base_metrics)
-        # Format saved scenarios
         for col in saved.columns:
             if col in ["New Price", "New Cost", "Revenue", "Variable Cost", "Profit"]:
                 saved[col] = saved[col].map(lambda x: f"${x:,.2f}")
@@ -111,7 +116,6 @@ with col2:
                 saved[col] = saved[col].map(lambda x: f"{x}%")
             elif col.endswith("Volume"):
                 saved[col] = saved[col].map(lambda x: f"{x:,.2f}")
-        # Show with index as blank by resetting index
         saved.index = range(1, len(saved)+1)
         st.table(saved)
     else:
