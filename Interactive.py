@@ -1,27 +1,30 @@
 import streamlit as st
 import pandas as pd
 
-# Page configuration (must be the first Streamlit command)
+# Page configuration (must be first Streamlit call)
 st.set_page_config(page_title="Interactive Slider Model", layout="wide")
 
-# Global CSS for larger text and inputs
+# Global CSS for responsive layout and larger text
 st.markdown(
     """
     <style>
-    html, body, [class*=\"css\"] {
-        font-size: 20px !important;
-    }
-    /* Enlarge slider and input labels */
-    .stSlider label, .stNumberInput label {
-        font-size: 20px !important;
-    }
+      .block-container {
+        max-width: 95% !important;
+        padding: 1rem !important;
+      }
+      html, body, [class*="css"] {
+        font-size: 28px !important;
+      }
+      .stSlider span {
+        font-size: 32px !important;
+      }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 st.title("Interactive Slider Model: Revenue & Profit")
-st.markdown("Adjust parameters on the left and save scenarios for comparison on the right.")
+st.markdown("Adjust parameters on the left and save or reset scenarios on the right.")
 
 # Initialize saved scenarios
 if "saved_scenarios" not in st.session_state:
@@ -37,13 +40,6 @@ def compute_metrics(base_price, base_volume, base_cost, fixed_cost,
     variable_cost = new_cost * new_volume
     profit = revenue - variable_cost - fixed_cost
     return {
-        "Base Price": base_price,
-        "Base Volume": base_volume,
-        "Base Cost": base_cost,
-        "Fixed Cost": fixed_cost,
-        "Price Change %": price_change,
-        "Volume Change %": volume_change,
-        "Cost Change %": cost_change,
         "New Price": new_price,
         "New Volume": new_volume,
         "New Cost": new_cost,
@@ -52,69 +48,134 @@ def compute_metrics(base_price, base_volume, base_cost, fixed_cost,
         "Profit": profit
     }
 
-# Layout: two columns
+# Layout: inputs (left) and outputs & saved scenarios (right)
 col1, col2 = st.columns([1, 3])
 
-# Metrics to hide from outputs
-base_metrics = ["Base Price", "Base Volume", "Base Cost", "Fixed Cost"]
-
 with col1:
-    st.header("Inputs & Save")
-    # Base parameter inputs
-    base_price = st.number_input("Base Price per Unit", min_value=0.0, value=10.0, step=0.1, format="%.2f")
-    base_volume = st.number_input("Base Volume", min_value=0.0, value=1000.0, step=10.0, format="%.2f")
-    base_cost = st.number_input("Base Cost per Unit", min_value=0.0, value=8.0, step=0.1, format="%.2f")
-    fixed_cost = st.number_input("Fixed Cost", min_value=0.0, value=1000.0, step=10.0, format="%.2f")
+    st.subheader("Inputs & Reset/Save")
 
-    # Integer percentage sliders
-    price_change = st.slider("Price change (%)", -50, 50, 0, step=1)
-    volume_change = st.slider("Volume change (%)", -50, 50, 0, step=1)
-    cost_change = st.slider("Cost change (%)", -50, 50, 0, step=1)
+    # Base Price per Unit
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Base Price per Unit</div>", unsafe_allow_html=True)
+    base_price = st.number_input(
+        "Base Price per Unit", 0.0, 1e6, 10.0, 1.0,
+        format="%.0f", key="base_price", label_visibility="hidden"
+    )
 
-    # Compute current scenario
-    current = compute_metrics(base_price, base_volume, base_cost, fixed_cost,
-                              price_change, volume_change, cost_change)
-    # Save button
-    if st.button("Save This Scenario"):
-        st.session_state.saved_scenarios.append(current)
-        st.success("Scenario saved!")
+    # Base Volume
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Base Volume</div>", unsafe_allow_html=True)
+    base_volume = st.number_input(
+        "Base Volume", 0.0, 1e6, 1000.0, 10.0,
+        format="%.0f", key="base_volume", label_visibility="hidden"
+    )
+
+    # Base Cost per Unit
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Base Cost per Unit</div>", unsafe_allow_html=True)
+    base_cost = st.number_input(
+        "Base Cost per Unit", 0.0, 1e6, 8.0, 1.0,
+        format="%.0f", key="base_cost", label_visibility="hidden"
+    )
+
+    # Fixed Cost
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Fixed Cost</div>", unsafe_allow_html=True)
+    fixed_cost = st.number_input(
+        "Fixed Cost", 0.0, 1e6, 1000.0, 10.0,
+        format="%.0f", key="fixed_cost", label_visibility="hidden"
+    )
+
+    # Price change (%) slider
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Price change (%)</div>", unsafe_allow_html=True)
+    price_change = st.slider(
+        "Price change (%)", -50, 50, 0, 1,
+        key="price_change", label_visibility="hidden"
+    )
+
+    # Volume change (%) slider
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Volume change (%)</div>", unsafe_allow_html=True)
+    volume_change = st.slider(
+        "Volume change (%)", -50, 50, 0, 1,
+        key="volume_change", label_visibility="hidden"
+    )
+
+    # Cost change (%) slider
+    st.markdown("<div style='font-size:26px; font-weight:bold;'>Cost change (%)</div>", unsafe_allow_html=True)
+    cost_change = st.slider(
+        "Cost change (%)", -50, 50, 0, 1,
+        key="cost_change", label_visibility="hidden"
+    )
+
+    # Compute metrics based on inputs
+    metrics_input = compute_metrics(
+        base_price, base_volume, base_cost, fixed_cost,
+        price_change, volume_change, cost_change
+    )
+
+    # Buttons: Save and Reset
+    btn1, btn2 = st.columns(2)
+    with btn1:
+        if st.button("Save This Scenario"):
+            st.session_state.saved_scenarios.append(metrics_input)
+            st.success("Scenario saved!")
+    with btn2:
+        if st.button("Reset"):
+            st.session_state.saved_scenarios = []
+            st.success("Saved scenarios cleared!")
 
 with col2:
     st.subheader("Calculated Outputs")
-    # Prepare display: exclude base & percent metrics
-    display = {k: v for k, v in current.items() if k not in base_metrics and not k.endswith("%")}
-    df_display = pd.DataFrame.from_dict(display, orient='index', columns=['Value'])
-
-    # Formatting
-    def fmt_val(metric, val):
+    display = metrics_input
+    def fmt(metric, val):
         if metric in ["New Price", "New Cost", "Revenue", "Variable Cost", "Profit"]:
-            return f"${val:,.2f}"
+            return f"${val:,.0f}"
         if metric.endswith("Volume"):
-            return f"{val:,.2f}"
+            return f"{val:,.0f}"
         return val
 
-    df_display['Value'] = [fmt_val(idx, v) for idx, v in df_display['Value'].items()]
-    # Display without index name
-    st.table(df_display)
+    # Table at half width
+    html = (
+        '<div style="overflow-x:auto;">'
+        '<table style="width:50%;border-collapse:collapse;font-size:26px;">'
+    )
+    html += (
+        '<tr><th style="text-align:left;padding:8px;">Metric</th>'
+        '<th style="text-align:right;padding:8px;">Value</th></tr>'
+    )
+    for metric, val in display.items():
+        html += (
+            f'<tr><td style="font-weight:bold;padding:8px;">{metric}</td>'
+            f'<td style="text-align:right;padding:8px;">{fmt(metric, val)}</td></tr>'
+        )
+    html += '</table></div>'
+    st.markdown(html, unsafe_allow_html=True)
 
-    st.subheader("Comparison of Saved Scenarios")
+    st.subheader("Saved Scenarios")
     if st.session_state.saved_scenarios:
-        saved = pd.DataFrame(st.session_state.saved_scenarios)
-        # Drop base metrics
-        saved = saved.drop(columns=base_metrics)
-        # Format values
-        for col in saved.columns:
+        saved_df = pd.DataFrame(st.session_state.saved_scenarios)
+        for col in saved_df.columns:
             if col in ["New Price", "New Cost", "Revenue", "Variable Cost", "Profit"]:
-                saved[col] = saved[col].map(lambda x: f"${x:,.2f}")
-            elif col.endswith("%"):
-                saved[col] = saved[col].map(lambda x: f"{x}%")
+                saved_df[col] = saved_df[col].map(lambda x: f"${x:,.0f}")
             elif col.endswith("Volume"):
-                saved[col] = saved[col].map(lambda x: f"{x:,.2f}")
-        # Style: bold first saved scenario row
-        def highlight_first(row):
-            return ['font-weight: bold']*len(row) if row.name == 0 else ['']*len(row)
-        styled = saved.style.apply(highlight_first, axis=1)
-        st.dataframe(styled)
+                saved_df[col] = saved_df[col].map(lambda x: f"{x:,.0f}")
+        # Render HTML table for saved scenarios
+        html_saved = (
+            '<div style="overflow-x:auto;">'
+            '<table style="width:100%;border-collapse:collapse;font-size:26px;">'
+        )
+        html_saved += '<tr>'
+        for col in saved_df.columns:
+            html_saved += (
+                f'<th style="padding:8px;border:1px solid #ddd;text-align:center;">{col}</th>'
+            )
+        html_saved += '</tr>'
+        for idx, row in saved_df.iterrows():
+            style = 'font-weight:bold;' if idx == 0 else ''
+            html_saved += f'<tr style="{style}">'
+            for col in saved_df.columns:
+                html_saved += (
+                    f'<td style="padding:8px;border:1px solid #ddd;text-align:center;">{row[col]}</td>'
+                )
+            html_saved += '</tr>'
+        html_saved += '</table></div>'
+        st.markdown(html_saved, unsafe_allow_html=True)
     else:
         st.info("No scenarios saved yet. Use the left panel to save your first scenario.")
 
