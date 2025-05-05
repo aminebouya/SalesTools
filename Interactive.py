@@ -4,15 +4,6 @@ import pandas as pd
 # Page configuration (must be the first Streamlit command)
 st.set_page_config(page_title="Interactive Slider Model", layout="wide")
 
-# --- Authentication ---
-PASSWORD = "PVS101"  # Set your desired password
-# Prompt for password in sidebar
-st.sidebar.header("Login")
-password_input = st.sidebar.text_input("Password", type="password")
-if password_input != PASSWORD:
-    st.sidebar.error("Invalid password")
-    st.stop()
-
 # Global CSS for larger text and inputs
 st.markdown(
     """
@@ -103,12 +94,15 @@ with col2:
         return val
 
     df_display['Value'] = [fmt_val(idx, v) for idx, v in df_display['Value'].items()]
+    # Display without index name
     st.table(df_display)
 
     st.subheader("Comparison of Saved Scenarios")
     if st.session_state.saved_scenarios:
         saved = pd.DataFrame(st.session_state.saved_scenarios)
+        # Drop base metrics
         saved = saved.drop(columns=base_metrics)
+        # Format values
         for col in saved.columns:
             if col in ["New Price", "New Cost", "Revenue", "Variable Cost", "Profit"]:
                 saved[col] = saved[col].map(lambda x: f"${x:,.2f}")
@@ -116,8 +110,11 @@ with col2:
                 saved[col] = saved[col].map(lambda x: f"{x}%")
             elif col.endswith("Volume"):
                 saved[col] = saved[col].map(lambda x: f"{x:,.2f}")
-        saved.index = range(1, len(saved)+1)
-        st.table(saved)
+        # Style: bold first saved scenario row
+        def highlight_first(row):
+            return ['font-weight: bold']*len(row) if row.name == 0 else ['']*len(row)
+        styled = saved.style.apply(highlight_first, axis=1)
+        st.dataframe(styled)
     else:
         st.info("No scenarios saved yet. Use the left panel to save your first scenario.")
 
